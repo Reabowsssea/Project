@@ -1,0 +1,327 @@
+kind: pipeline
+type: docker
+name: default
+
+steps:
+  - name: Build Editor
+    image: adamrehn/ue4-full:4.27.2_10June2023
+    commands:
+      - cd engine
+      - bash Build/ContinuousIntegration/build_project.sh
+      - echo "The commit builds"
+    depends_on:
+      - clone
+
+  - name: Package Project
+    image: adamrehn/ue4-full:4.27.2_10June2023
+    commands:
+      - cd engine
+      - bash Build/ContinuousIntegration/package_ue4_project.sh "TestWorlds" ${DRONE_COMMIT:0:7}
+      - echo "The pull request was successfully packaged"
+    depends_on:
+      - Build Editor
+
+  ## Pushes build to minio, after which the python, or client, side can pull the binaries from there
+  - name: Push to S3
+    image: plugins/s3
+    settings:
+      bucket: holo
+      access_key:
+        from_secret: minio_username
+      secret_key:
+        from_secret: minio_password
+      source: engine/final/*
+      strip_prefix: engine/final/
+      target: /TestWorlds/${DRONE_BRANCH}
+      path_style: true
+      endpoint: http://minio:9000/
+    depends_on:
+      - Package Project
+
+  - name: Push Tagged S3
+    image: plugins/s3
+    settings:
+      bucket: holo
+      access_key:
+        from_secret: minio_username
+      secret_key:
+        from_secret: minio_password
+      source: engine/tag/*
+      strip_prefix: engine/tag/
+      target: /TestWorlds/${DRONE_TAG}
+      path_style: true
+      endpoint: http://minio:9000/
+    when:
+      event:
+        - tag
+
+  ## Build a temporary docker image that contains everything necessary to simplify further steps
+  - name: build_docker
+    image: docker:latest
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+    commands:
+      - cd client
+      - REPO_NAME2="${DRONE_COMMIT:0:7}"
+      - docker build -t "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}" .
+    depends_on:
+      - Push to S3
+
+  ## Install holoocean package onto the docker image
+  - name: install_package
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    environment:
+      HOLODECKPATH: packages
+    commands:
+      - cd client
+      - pip3 install .
+      - python3 -c "import holoocean; holoocean.install('TestWorlds', branch='${DRONE_BRANCH}', commit='${DRONE_COMMIT:0:7}')"
+    depends_on:
+      - build_docker
+
+  ## Run through all python tests
+
+  # Test Python 3.7
+  - name: py37-agents
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py37-agents
+    depends_on:
+      - install_package
+   
+  - name: py37-lcm
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py37-lcm
+    depends_on:
+      - py37-agents
+
+  - name: py37-scenarios
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py37-scenarios
+    depends_on:
+      - py37-lcm
+
+  # Test Python 3.8
+  - name: py38-agents
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py38-agents
+    depends_on:
+      - install_package
+
+  - name: py38-lcm
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py38-lcm
+    depends_on:
+      - py38-agents
+
+  - name: py38-scenarios
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py38-scenarios
+    depends_on:
+      - py38-lcm
+
+  # Test Python 3.9
+  - name: py39-agents
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py39-agents
+    depends_on:
+      - install_package
+
+  - name: py39-lcm
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py39-lcm
+    depends_on:
+      - py39-agents
+
+  - name: py39-scenarios
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py39-scenarios
+    depends_on:
+      - py39-lcm
+
+  # Test Python 3.10
+  - name: py310-agents
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py310-agents
+    depends_on:
+      - install_package
+
+  - name: py310-lcm
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py310-lcm
+    depends_on:
+      - py310-agents
+
+  - name: py310-scenarios
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py310-scenarios
+    depends_on:
+      - py310-lcm
+
+  # Test Python 3.11
+  - name: py311-agents
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py311-agents
+    depends_on:
+       - install_package
+
+  - name: py311-lcm
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py311-lcm
+    depends_on:
+      - py311-agents
+
+  - name: py311-scenarios
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py311-scenarios
+    depends_on:
+      - py311-lcm
+      
+  ## Test Python 3.7-3.11 Sensors
+
+  - name: py37-sensors
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py37-sensors
+    depends_on:
+      - py37-scenarios
+      - py38-scenarios
+      - py39-scenarios
+      - py310-scenarios
+      - py311-scenarios
+
+  - name: py38-sensors
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py38-sensors
+    depends_on:
+      - py37-sensors
+
+  - name: py39-sensors
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py39-sensors
+    depends_on:
+      - py38-sensors
+
+  - name: py310-sensors
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py310-sensors
+    depends_on:
+      - py39-sensors
+
+  - name: py311-sensors
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    commands:
+      - cd client
+      - tox -e py311-sensors
+    depends_on:
+      - py310-sensors
+
+  - name: Update_Docs_repo 
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+    commands:
+      - git clone https://github.com/byu-holoocean/holoocean-docs.git
+      - pip3 install bs4 sphinx-build sphinx-rtd-theme sphinx-copybutton autodocsumm
+      - export PATH="/home/ue4/.local/bin:$PATH"
+      - python3 client/docmaker.py
+      - mkdir -p holoocean-docs/${DRONE_TAG}
+      - cp -r docs holoocean-docs/${DRONE_TAG}
+      - cd holoocean-docs
+      - python3 new_version.py ${DRONE_TAG}
+      - python3 Sidebar_version_links.py ${DRONE_TAG}
+      - git add .
+      - git commit -m "Update to version ${DRONE_TAG}"
+      - git reset --soft HEAD~2
+      - git commit -m "Update to version ${DRONE_TAG}"
+      - git push -f
+    depends_on:
+      - build_docker
+    when:
+      event:
+        - tag
+
+  - name: Update_Docs_repo_develop
+    image: "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+    commands:
+      - git clone https://github.com/byu-holoocean/holoocean-docs.git
+      - pip3 install bs4 sphinx sphinx-rtd-theme sphinx-copybutton autodocsumm
+      - export PATH="/home/ue4/.local/bin:$PATH"
+      - python3 client/docmaker.py
+      - rm -rf holoocean-docs/develop
+      - mv docs holoocean-docs/develop
+      - cd holoocean-docs
+      - python3 Sidebar_version_links.py develop
+      - git add .
+      - git commit -m "Update to develop"
+      - git reset --soft HEAD~2
+      - git commit -m "Update to develop"
+      - git push -f
+
+    depends_on:
+      - build_docker
+    when:
+      branch:
+        - develop
+
+  ## Clean up docker image off of the server
+  - name: remove-docker-image
+    image: docker:latest
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+    commands:
+     - docker rmi -f "byu-holoocean/holoocean:${DRONE_COMMIT:0:7}"
+    depends_on:
+     - py311-sensors
+    when:
+      status:
+        - success
+        - failure
+
+volumes:
+  - name: docker_sock
+    host:
+      path: /var/run/docker.sock
+

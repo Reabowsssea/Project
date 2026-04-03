@@ -1,0 +1,74 @@
+{
+    "model": {
+        "name": "ZoeDepthNK",
+        "version_name": "v2",
+        "bin_conf" : [
+            {
+                "name": "nyu",
+                "n_bins": 64,
+                "min_depth": 1,
+                "max_depth": 23.2
+            },
+            {
+                "name": "kitti",
+                "n_bins": 64,
+                "min_depth": 1,
+                "max_depth": 38.8
+            },
+            {
+                "name": "sea_thru",
+                "n_bins": 64,
+                "min_depth": 1e-3,
+                "max_depth": 10
+            }
+        ], 
+        "bin_embedding_dim": 128,
+        "bin_centers_type": "softplus",
+        "n_attractors":[16, 8, 4, 1],
+        "attractor_alpha": 1000,
+        "attractor_gamma": 2,
+        "attractor_kind" : "mean",
+        "attractor_type" : "exp",
+        "min_temp": 0.0212,
+        "max_temp": 50.0, 
+        "memory_efficient": true, 
+        "midas_model_type" : "dinov2_large",
+        "img_size": [518, 518]
+    },
+
+    "train": {
+        "train_midas": true,
+        "use_pretrained_midas": true,
+        "trainer": "zoedepth_nk",
+        "epochs": 5,
+        "bs": 4,
+        "optim_kwargs": {"lr": 0.0002512, "wd": 0.01},
+        "sched_kwargs": {"div_factor": 1, "final_div_factor": 10000, "pct_start": 0.7, "three_phase":false, "cycle_momentum": true},
+        "same_lr": false,
+        "w_si": 0.7,
+        "w_domain": 100,
+        "avoid_boundary": false,
+        "random_crop": false,
+        "input_width": 640,
+        "input_height": 480,
+        "w_grad": 0,
+        "w_reg": 0,
+        "w_rmse":0.3,
+        "midas_lr_factor": 10,
+        "encoder_lr_factor":50,
+        "pos_enc_lr_factor":10
+    },
+
+    "infer": {
+        "train_midas": false,
+        "pretrained_resource": "local::/root/autodl-tmp/ZoeDepth-main/output/ZoeDepthNKv2_21-Oct_21-24-6f43e98c50a3_best.pt",
+        "use_pretrained_midas": false,
+        "force_keep_ar": true
+    },
+    
+    "eval": {
+        "train_midas": false,
+        "pretrained_resource": "local::/root/autodl-tmp/ZoeDepth-main/output/ZoeDepthNKv2_21-Oct_21-24-6f43e98c50a3_best.pt",
+        "use_pretrained_midas": false
+    }
+}
