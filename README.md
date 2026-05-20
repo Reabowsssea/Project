@@ -19,14 +19,15 @@ Main/
 │ ├── ZoeDepthmain/ # 深度估计模块（论文第3章）
 │ ├── UWAmodel_2/ # 态势感知模块（论文第4章）
 │ ├── HoloOceanSimulation/ # 仿真与MPC控制（论文第5章）
-│ ├── run_depth_evaluation.py/ # 集成之后单张测推理速度
-│ └── main.py/ 
-└── Dataset/ # 数据集
-  ├── FLSeaVI/ # 深度估计公开数据
-  ├── Sea-thru/ # 深度估计公开数据
-  ├── UVSA/ # 自建态势评估视频数据集
-  └── CalibData/ # 自建标定数据（RGB+SBES）
-
+│ ├── run_depth_evaluation.py # 集成之后单张推理速度测试
+│ └── main.py # 系统主入口
+├── Dataset/ # 数据集
+│ ├── FLSeaVI/ # 深度估计公开数据
+│ ├── Sea-thru/ # 深度估计公开数据
+│ ├── UVSA/ # 自建态势评估视频数据集
+│ └── CalibData/ # 自建标定数据（RGB+SBES）
+└── paper/   # 论文及相关材料
+    └── 论文.pdf         # 毕业论文/学位论文
 
 ```
 ## 代码说明
@@ -44,6 +45,10 @@ Main/
 - **`Dataset/UVSA/`**：自建水下视觉态势评估视频数据集，包含326个视频片段及像素级“危险/警告/安全”标注，用于训练SA-Net。
 - **`Dataset/CalibData/`**：自建标定数据集，在室内水池同步采集的RGB图像与P30E声呐距离数据，用于传感器融合验证。
 
+
+## 论文文件夹说明
+
+- **`paper/`**：存放与本项目相关的学位论文、会议/期刊论文及其补充材料，方便版本管理和查阅。
 
 
 ## 未来改进方向
